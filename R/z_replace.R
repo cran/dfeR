@@ -3,7 +3,9 @@
 #' @description
 #' Replaces `NA` values in tables except for ones in time and geography
 #' columns that must be included in DfE official statistics.
-#' \href{https://www.shorturl.at/chy76}{Guidance on our Open Data Standards.}
+# nolint start: line_length_linter.
+#' \href{https://dfe-analytical-services.github.io/analysts-guide/statistics-production/ud.html}{Guidance on our Open Data Standards.}
+# nolint end
 #'
 #' @details
 
@@ -42,9 +44,7 @@
 #' # Use a different replacement value
 #' z_replace(df, replacement_alt = "c")
 #'
-z_replace <- function(data,
-                      replacement_alt = NULL,
-                      exclude_columns = NULL) {
+z_replace <- function(data, replacement_alt = NULL, exclude_columns = NULL) {
   # check if table is empty
 
   # Check if the table has rows - if not, stop the process
@@ -66,7 +66,6 @@ z_replace <- function(data,
   ref_col_names <- gsub("  ", " ", ref_col_names)
   # adding _ instead of spaces
   ref_col_names <- gsub(" ", "_", tolower(ref_col_names))
-
 
   # standardize column names for data input
   data_col_names_og <- colnames(data)
@@ -98,7 +97,8 @@ z_replace <- function(data,
     # check that replacement_alt is a single character vector
   } else if (!is.character(replacement_alt)) {
     stop(
-      "You provided a ", data.class(replacement_alt),
+      "You provided a ",
+      data.class(replacement_alt),
       " input for replacement_alt.\n",
       "Please amend replace it with a character vector."
     )
@@ -112,19 +112,18 @@ z_replace <- function(data,
     replacement_alt <- replacement_alt
   }
 
-
   # start loop based on exclude_columns
 
   # if exclude columns is specified, use the snake case version
   if (!is.null(exclude_columns)) {
-    data <- data %>%
+    data <- data |>
       dplyr::mutate(dplyr::across(
         -tidyselect::any_of(c(
           geog_time_identifiers,
           exclude_columns
         )),
         ~ as.character(.)
-      )) %>%
+      )) |>
       # replace NAs
       dplyr::mutate(dplyr::across(
         -tidyselect::any_of(c(
@@ -136,11 +135,11 @@ z_replace <- function(data,
   } else {
     # if exclude_columns is not specified, then use the saved potential
     # location and time columns only
-    data <- data %>%
+    data <- data |>
       dplyr::mutate(dplyr::across(
         -tidyselect::any_of(c(geog_time_identifiers)),
         ~ as.character(.)
-      )) %>%
+      )) |>
       # replace NAs
       dplyr::mutate(dplyr::across(
         -tidyselect::any_of(c(geog_time_identifiers)),
@@ -148,5 +147,5 @@ z_replace <- function(data,
       ))
   }
 
-  return(data)
+  data
 }

@@ -38,6 +38,15 @@ If none are provided, it checks if columns are specified for exclusion
 via \code{exclude_columns}.
 If neither is specified, all columns in the data frame are formatted.
 }
+\section{Warning}{
+
+Any selected column that cannot be coerced to numeric - including
+character columns such as geography or school names - is returned as \code{NA}
+by default. Pass \code{ignore_na = TRUE} (via \code{...}, forwarded to
+\code{dfeR::pretty_num()}) to leave those values unchanged instead; this is the
+safe way to format a table that also contains non-numeric columns.
+}
+
 \examples{
 # Example data frame
 df <- data.frame(
@@ -46,8 +55,13 @@ df <- data.frame(
   c = c("A", "B", "C")
 )
 
-# Apply formatting to all columns
+# Apply formatting to all columns - note column c is character, so it
+# cannot be coerced to numeric and comes back as NA (see Warning section)
 pretty_num_table(df, dp = 2)
+
+# Apply formatting to all columns, leaving non-numeric columns like c
+# unchanged instead of turning them into NA
+pretty_num_table(df, dp = 2, ignore_na = TRUE)
 
 # Apply formatting to only selected columns
 pretty_num_table(df, include_columns = c("a"), dp = 2)
@@ -63,9 +77,10 @@ pretty_num_table(df, alt_na = "[z]", exclude_columns = c("b"), dp = 2)
 \seealso{
 \code{\link[=pretty_num]{pretty_num()}}
 
-Other prettying: 
-\code{\link{pretty_filesize}()},
-\code{\link{pretty_num}()},
-\code{\link{pretty_time_taken}()}
+Other prettying:
+\code{\link[=pretty_filesize]{pretty_filesize()}},
+\code{\link[=pretty_num]{pretty_num()}},
+\code{\link[=pretty_time]{pretty_time()}},
+\code{\link[=pretty_time_taken]{pretty_time_taken()}}
 }
 \concept{prettying}

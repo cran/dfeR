@@ -8,9 +8,10 @@
 [![R-CMD-check](https://github.com/dfe-analytical-services/dfeR/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/dfe-analytical-services/dfeR/actions/workflows/R-CMD-check.yaml)
 [![pkgdown](https://github.com/dfe-analytical-services/dfeR/actions/workflows/pkgdown.yaml/badge.svg)](https://github.com/dfe-analytical-services/dfeR/actions/workflows/pkgdown.yaml)
 [![Codecov test
-coverage](https://codecov.io/gh/dfe-analytical-services/dfeR/branch/main/graph/badge.svg)](https://app.codecov.io/gh/dfe-analytical-services/dfeR?branch=main)
+coverage](https://codecov.io/gh/dfe-analytical-services/dfeR/graph/badge.svg)](https://app.codecov.io/gh/dfe-analytical-services/dfeR)
 [![Lifecycle:
-experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+stable](https://img.shields.io/badge/lifecycle-stable-green.svg)](https://lifecycle.r-lib.org/articles/stages.html#stable)
+[![CRAN downloads](https://cranlogs.r-pkg.org/badges/dfeR)](https://cran.r-project.org/package=dfeR)
 <!-- badges: end -->
 
 The goal of dfeR is to help standardise R programming across the
@@ -64,13 +65,21 @@ gives more functions for directly extracting data from there.
 
 ## Installation
 
-dfeR is available on CRAN and you can install directly from there:
+### Install CRAN version
+
+dfeR is available on CRAN and can be installed using
+[pak](https://pak.r-lib.org/) for faster and more reliable package
+installation.
+
+Then install dfeR from CRAN:
 
 ``` r
-install.packages("dfeR")
+# If you don’t have pak installed yet, install it first using
+# install.packages("pak") is required 
+pak::pak("dfeR")
 ```
 
-You can install the development version from GitHub.
+### Install development version from GitHub
 
 If you are using
 [renv](https://rstudio.github.io/renv/articles/renv.html) in your
@@ -83,8 +92,9 @@ renv::install("dfe-analytical-services/dfeR")
 Otherwise:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("dfe-analytical-services/dfeR")
+# If you don’t have pak installed yet, install it first using
+# install.packages("pak") 
+pak::pak("dfe-analytical-services/dfeR")
 ```
 
 ------------------------------------------------------------------------
@@ -159,37 +169,20 @@ format_ay_reverse("2024/25")
 format_fy_reverse("2024-25")
 #> [1] "202425"
 
-# Get Ward to PCon to LAD to LA to Rgn to Ctry lookup file
-my_data <- dfeR::wd_pcon_lad_la_rgn_ctry
+# Get hierachical lookup file for common geographies
+my_data <- dfeR::geo_hierarchy
 head(my_data) # show first 5 rows in console
-#>   first_available_year_included most_recent_year_included
-#> 1                          2017                      2017
-#> 2                          2017                      2017
-#> 3                          2017                      2020
-#> 4                          2017                      2017
-#> 5                          2017                      2020
-#> 6                          2017                      2017
-#>                ward_name  pcon_name              lad_name               la_name
-#> 1               Bastwell  Blackburn Blackburn with Darwen Blackburn with Darwen
-#> 2                Ormesby     Redcar  Redcar and Cleveland  Redcar and Cleveland
-#> 3            Burn Valley Hartlepool            Hartlepool            Hartlepool
-#> 4 Beardwood with Lammack  Blackburn Blackburn with Darwen Blackburn with Darwen
-#> 5               De Bruce Hartlepool            Hartlepool            Hartlepool
-#> 6           St Germain's     Redcar  Redcar and Cleveland  Redcar and Cleveland
-#>   region_name country_name ward_code pcon_code  lad_code new_la_code
-#> 1  North West      England E05001621 E14000570 E06000008   E06000008
-#> 2  North East      England E05001518 E14000891 E06000003   E06000003
-#> 3  North East      England E05008942 E14000733 E06000001   E06000001
-#> 4  North West      England E05001622 E14000570 E06000008   E06000008
-#> 5  North East      England E05008943 E14000733 E06000001   E06000001
-#> 6  North East      England E05001519 E14000891 E06000003   E06000003
-#>   region_code country_code
-#> 1   E12000002    E92000001
-#> 2   E12000001    E92000001
-#> 3   E12000001    E92000001
-#> 4   E12000002    E92000001
-#> 5   E12000001    E92000001
-#> 6   E12000001    E92000001
+#> # A tibble: 6 × 17
+#>   first_available_year_included most_recent_year_included ward_name pcon_name     lad_name  la_name english_devolved_are…¹ region_name country_name ward_code pcon_code lad_code old_la_code new_la_code
+#>                           <dbl>                     <dbl> <chr>     <chr>         <chr>     <chr>   <chr>                  <chr>       <chr>        <chr>     <chr>     <chr>    <chr>       <chr>      
+#> 1                          2017                      2021 Abbey     Barking       Barking … Barkin… Greater London Author… London      England      E05000026 E14000540 E090000… 301         E09000002  
+#> 2                          2022                      2023 Abbey     Barking       Barking … Barkin… Greater London Author… London      England      E05014053 E14000540 E090000… 301         E09000002  
+#> 3                          2024                      2025 Abbey     Barking       Barking … Barkin… Greater London Author… London      England      E05014053 E14001073 E090000… 301         E09000002  
+#> 4                          2017                      2017 Abbey     Bath          Bath and… Bath a… West of England        South West  England      E05001935 E14000547 E060000… 800         E06000022  
+#> 5                          2024                      2025 Abbey     Belfast North Antrim a… Antrim… Not applicable         Northern I… Northern Ir… N08000101 N05000002 N090000… z           N09000001  
+#> 6                          2017                      2023 Abbey     Belfast North Antrim a… Antrim… Not applicable         Northern I… Northern Ir… N08000101 N06000002 N090000… z           N09000001  
+#> # ℹ abbreviated name: ¹​english_devolved_area_name
+#> # ℹ 3 more variables: english_devolved_area_code <chr>, region_code <chr>, country_code <chr>
 
 # Get all countries
 dfeR::countries
@@ -208,46 +201,67 @@ dfeR::countries
 # Get all PCon names and codes for 2024
 fetch_pcons(2024) |>
   head() # show first 5 rows only
-#>   pcon_code                pcon_name
-#> 1 S14000045               Midlothian
-#> 2 S14000027     Na h-Eileanan an Iar
-#> 3 S14000021        East Renfrewshire
-#> 4 S14000048 North Ayrshire and Arran
-#> 5 S14000051      Orkney and Shetland
-#> 6 E14001440                   Redcar
+#> # A tibble: 6 × 2
+#>   pcon_code pcon_name            
+#>   <chr>     <chr>                
+#> 1 E14001073 Barking              
+#> 2 N05000002 Belfast North        
+#> 3 E14001149 Cambridge            
+#> 4 E14001193 Derby North          
+#> 5 E14001194 Derby South          
+#> 6 S14000073 Dumfries and Galloway
 
 # Get All LADs in Scotland in 2017
 fetch_lads(2017, "Scotland") |>
   head() # show first 5 rows only
-#>    lad_code           lad_name
-#> 1 S12000019         Midlothian
-#> 2 S12000015               Fife
-#> 3 S12000014            Falkirk
-#> 4 S12000013 Na h-Eileanan Siar
-#> 5 S12000018         Inverclyde
-#> 6 S12000011  East Renfrewshire
+#> # A tibble: 6 × 2
+#>   lad_code  lad_name             
+#>   <chr>     <chr>                
+#> 1 S12000006 Dumfries and Galloway
+#> 2 S12000034 Aberdeenshire        
+#> 3 S12000017 Highland             
+#> 4 S12000044 North Lanarkshire    
+#> 5 S12000033 Aberdeen City        
+#> 6 S12000036 City of Edinburgh
 
 # Get all LAs in Scotland and Northern Ireland in 2022
 fetch_las(2022, c("Scotland", "Northern Ireland")) |>
   head() # show first 5 rows only
-#>   new_la_code                              la_name
-#> 1   N09000003                              Belfast
-#> 2   N09000004             Causeway Coast and Glens
-#> 3   N09000002 Armagh City, Banbridge and Craigavon
-#> 4   N09000005              Derry City and Strabane
-#> 5   N09000001              Antrim and Newtownabbey
-#> 6   N09000006                  Fermanagh and Omagh
+#> # A tibble: 6 × 3
+#>   new_la_code la_name                  old_la_code
+#>   <chr>       <chr>                    <chr>      
+#> 1 N09000001   Antrim and Newtownabbey  z          
+#> 2 S12000006   Dumfries and Galloway    z          
+#> 3 N09000010   Newry, Mourne and Down   z          
+#> 4 S12000034   Aberdeenshire            z          
+#> 5 N09000008   Mid and East Antrim      z          
+#> 6 N09000004   Causeway Coast and Glens z
 
 # Get all Welsh wards for 2021
 fetch_wards(2021, "Wales") |>
   head() # show first 5 rows only
-#>   ward_code                   ward_name
-#> 1 W05000981                      Aethwy
-#> 2 W05000982               Bro Aberffraw
-#> 3 W05000983                  Bro Rhosyr
-#> 4 W05000107 Tregarth & Mynydd Llandygai
-#> 5 W05000984                    Caergybi
-#> 6 W05000985              Canolbarth Môn
+#> # A tibble: 6 × 2
+#>   ward_code ward_name     
+#>   <chr>     <chr>         
+#> 1 W05000720 Aber Valley   
+#> 2 W05000284 Aber-craf     
+#> 3 W05000357 Aberaeron     
+#> 4 W05000655 Aberaman North
+#> 5 W05001017 Aberaman South
+#> 6 W05000551 Aberavon
+
+# Get all combined mayoral authorities for 2025
+fetch_mayoral(2025) |>
+  head() # show first 5 rows only
+#> # A tibble: 6 × 2
+#>   english_devolved_area_code english_devolved_area_name     
+#>   <chr>                      <chr>                          
+#> 1 E61000001                  Greater London Authority       
+#> 2 E47000009                  West of England                
+#> 3 E47000008                  Cambridgeshire and Peterborough
+#> 4 E47000013                  East Midlands                  
+#> 5 E47000017                  Greater Lincolnshire           
+#> 6 E47000007                  West Midlands
 
 # The following have no specific years available and return all values
 fetch_regions()

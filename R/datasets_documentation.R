@@ -6,7 +6,7 @@
 #' GOR (Government Office Region) was the predecessor to RGN.
 #'
 #' @format ## `ons_geog_shorthands`
-#' A data frame with 7 rows and 3 columns:
+#' A data frame with 10 rows and 3 columns:
 #' \describe{
 #'   \item{ons_level_shorthands}{ONS shorthands used in their lookup files}
 #'   \item{name_column}{DfE names for geography name columns}
@@ -15,11 +15,19 @@
 #' @source curated by explore.statistics@@education.gov.uk
 "ons_geog_shorthands"
 
-#' Ward to Constituency to LAD to LA to Region to Country lookup
+#' Geography hierarchy lookup
 #'
 #' A lookup showing the hierarchy of ward to Westminster parliamentary
-#' constituency to local authority district to local authority to region to
-#' country for years 2017, 2019, 2020, 2021, 2022, 2023 and 2024.
+#' constituency to local authority district to local authority to
+#' combined mayoral authority to region to
+#' country for years 2017, 2019, 2020, 2021, 2022, 2023, 2024 and 2025.
+#'
+#' Note that combined mayoral authorities only exist in England, and we use
+#' `english_devolved_area_name` and `english_devolved_area_code` to refer
+#' to mayoral authorities in line with the standards set in DfE official
+#' statistics. Greater London Authority is not included in the ONS combined
+#' authority lookup, we have added that in for all local authority districts
+#' with codes that start with `E090...`.
 #'
 #' Changes we've made to the original lookup:
 #' 1. The original lookup from ONS uses the Upper Tier Local Authority, we then
@@ -41,8 +49,12 @@
 #' have Scotland as the region, we've forced that in for 2017 too to complete
 #' the data set.
 #'
-#' @format ## `wd_pcon_lad_la_rgn_ctry`
-#' A data frame with 24,629 rows and 14 columns:
+#' 6. We've added the Greater London Authority as the overarching mayoral
+#' authority (English devolved area) for all Local authority districts with
+#' codes that start `E090...`.
+#'
+#' @format ## `geo_hierarchy`
+#' A data frame with 26,057 rows and 17 columns:
 #' \describe{
 #'   \item{first_available_year_included}{
 #'   First year in the lookups that we see this location
@@ -54,18 +66,24 @@
 #'   \item{pcon_name}{Parliamentary constituency name}
 #'   \item{lad_name}{Local authority district name}
 #'   \item{la_name}{Local authority name}
+#'   \item{english_devolved_area_name}{Mayoral authority name}
 #'   \item{region_name}{Region name}
 #'   \item{country_code}{Country name}
 #'   \item{ward_code}{9 digit ward code}
 #'   \item{pcon_code}{9 digit westminster constituency code}
 #'   \item{lad_code}{9 digit local authority district code}
+#'   \item{old_la_code}{old 3 digit local authority code}
 #'   \item{new_la_code}{9 digit local authority code}
+#'   \item{english_devolved_area_code}{9 digit combined authority code}
 #'   \item{region_code}{9 digit region code}
 #'   \item{country_code}{9 digit country code}
 #' }
 #' @source https://geoportal.statistics.gov.uk/search?tags=lup_wd_pcon_lad_utla
-#' and https://geoportal.statistics.gov.uk/search?q=lup_wd_lad_cty_rgn_gor_ctry
-"wd_pcon_lad_la_rgn_ctry"
+#' https://geoportal.statistics.gov.uk/search?q=lup_wd_lad_cty_rgn_gor_ctry
+#' https://geoportal.statistics.gov.uk/search?tags=LUP_LAD_CAUTH
+#' https://get-information-schools.service.gov.uk/Guidance/LaNameCodes and
+#' https://tinyurl.com/EESScreenerLAs
+"geo_hierarchy"
 
 #' Lookup for valid country names and codes
 #'
@@ -114,5 +132,48 @@
 #' @format ## `geog_time_identifiers`
 #' A character vector with 38 potential column names in snake case format.
 #' @source curated by explore.statistics@@education.gov.uk.
-#' \href{https://www.shorturl.at/j4532}{Guidance on time and geography data.}
+# nolint start: line_length_linter.
+#' \href{https://dfe-analytical-services.github.io/analysts-guide/statistics-production/ud.html#time-and-geography}{Guidance on time and geography data.}
+# nolint end
 "geog_time_identifiers"
+
+#' Local Skills Improvement Plan (LSIP) areas to
+#' Local Authority District (LAD) Lookup
+#'
+#' A lookup table mapping Local Skills Improvement Plan (LSIP)
+#' areas to Local Authority Districts (LADs) in England. This dataset provides
+#' a mapping between LSIP areas and LADs as provided by
+#' the ONS Geography Portal.
+#'
+#' @details
+#' - Within a given year, each LAD is assigned to a single LSIP area. The LSIP
+#'   a LAD belongs to can change between lookups though, so across the data set
+#'   as a whole a LAD may appear against more than one LSIP area.
+#' - Mappings may change over time and can be tracked using the
+#'   `most_recent_year_included` and `first_available_year_included`
+#'    columns.
+#' - LSIP codes are not stable over time. A code can be kept but the area
+#'   renamed (E69000001 was 'Brighton and Hove, East Sussex, West Sussex' in
+#'   2023 and 'Sussex and Brighton' in 2025), and a name can be kept but the
+#'   code changed ('North East' was E69000023 in 2023 and E69000045 in 2025).
+#'   Joining on `lsip_code` alone across years will silently mismatch, so use
+#'   `lsip_code` and `lsip_name` together to identify an area within a lookup.
+#' - ONS have published LSIP lookups for 2023 and 2025 only, there was no 2024
+#'   lookup.
+#' @format ## `lsip_lad`
+#' A data frame with one row per LAD to LSIP pairing per lookup, currently
+#' 466 rows covering 298 LADs and 51 LSIP codes. As codes are reused for
+#' renamed areas, those 51 codes give 56 distinct code and name pairings,
+#' which is what `fetch_lsips()` returns. The columns are:
+#' \describe{
+#'   \item{lsip_code}{9-character code for the LSIP area}
+#'   \item{lsip_name}{Name of the Local Skills Improvement Plan (LSIP) area}
+#'   \item{lad_code}{9-character code for the Local Authority District}
+#'   \item{lad_name}{Name of the Local Authority District}
+#'   \item{most_recent_year_included}{The most recent year in which this
+#'     location appears in the lookup}
+#'   \item{first_available_year_included}{The first year in which this
+#'     location appears in the lookup}
+#' }
+#' @source https://geoportal.statistics.gov.uk/search?q=lad%20lsip
+"lsip_lad"

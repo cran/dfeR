@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Scalable Bulk Writing to Databricks: write_df_to_delta</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Scalable Bulk Writing to Databricks:
+write_df_to_delta</h1>
+
+
+
+<div id="executive-summary" class="section level2">
+<h2>Executive Summary</h2>
+<p>For DfE analysts moving data from RStudio to Databricks via an <a href="https://odbc.r-dbi.org/">odbc</a> connection,
+<code>write_df_to_delta()</code> is a significant step up from <a href="https://dbi.r-dbi.org/">DBI</a> methods. While
+<code>DBI::dbWriteTable()</code> relies on slow SQL-based uploads,
+<code>write_df_to_delta()</code> uses the <a href="https://docs.databricks.com/api/workspace/introduction">Databricks
+REST API</a> to stream data directly into <a href="https://docs.databricks.com/aws/en/volumes">Unity Catalog
+Volumes</a>, making the upload faster and more resilient.</p>
+<div id="why-this-is-a-game-changer-for-your-workflow" class="section level3">
+<h3>Why this is a game-changer for your workflow:</h3>
+<ul>
+<li><strong>Extreme Speed</strong>: <code>write_df_to_delta()</code>
+moves 1 million rows (42 MB) in 11 seconds—compared to 30 minutes using
+<code>DBI::dbWriteTable()</code>.</li>
+<li><strong>Proven at Scale</strong>: Successfully stress-tested up to 1
+billion rows (41 GB). To move this volume of data via
+<code>DBI::dbWriteTable()</code> would take an estimated 20 days of
+continuous processing; <code>write_df_to_delta()</code> completes the
+task in under half an hour.</li>
+<li><strong>Bypasses Payload Limits</strong>: Large files often cause
+REST API uploads to hang or fail. <code>write_df_to_delta()</code>
+automatically “chunks” your data, navigating the Databricks REST API
+limit of 5 GB per single file upload. As a result, you can upload
+gigabytes of data without a hitch.</li>
+<li><strong>Network Resiliency</strong>: Moving massive files over the
+network is prone to transient “blips.” Our built-in auto-retry logic
+ensures that if a REST request fails, <code>write_df_to_delta()</code>
+waits and tries again until the job is done.</li>
+<li><strong>Schema Safety</strong>: <code>DBI::dbWriteTable()</code>
+defaults to a 255-character limit for text, that is, it maps strings to
+Databricks SQL <code>VARCHAR(255)</code>.
+<code>write_df_to_delta()</code> maps character strings to Databricks
+SQL <code>STRING</code> types, meaning your long text fields can be
+uploaded without errors.</li>
+<li><strong>Precise Mapping</strong>: For advanced users,
+<code>write_df_to_delta()</code> allows for refined data type mapping
+(e.g., <code>FLOAT</code>, <code>DECIMAL</code>) via Arrow schemas.</li>
+</ul>
+</div>
+</div>
+<div id="under-the-hood-the-rest-api-advantage" class="section level2">
+<h2>Under the Hood: The REST API Advantage</h2>
+<p>Standard DBI uploads send data row-by-row or in SQL batches, which is
+incredibly slow for big data. <code>write_df_to_delta()</code> uses a
+sequential ingestion strategy:</p>
+<ol style="list-style-type: decimal">
+<li>It optionally creates or overwrites your Delta Lake table using SQL
+(via ODBC).</li>
+<li>It converts your data into compressed <a href="https://parquet.apache.org/">Parquet</a> file(s).</li>
+<li>It uses the Databricks REST API to upload those temporary file(s) to
+a Volume.</li>
+<li>It executes a SQL COPY INTO command to merge those file(s) into your
+table.</li>
+<li>It deletes the temporary file(s) from the Volume.</li>
+</ol>
+<p><strong>Parquet conversion</strong> is crucial for two reasons:</p>
+<ul>
+<li><strong>Efficiency</strong>: Parquet’s column-oriented compression
+significantly reduces the file size, making the network upload much
+faster.</li>
+<li><strong>Compatibility</strong>: Since Delta Lake tables are natively
+stored as Parquet files, converting the data upfront ensures a seamless,
+high-speed <code>COPY INTO</code> operation later.</li>
+</ul>
+</div>
+<div id="prerequisites-permissions-and-authentication" class="section level2">
+<h2>Prerequisites: Permissions and Authentication</h2>
+<p>To ensure a seamless transfer, you must verify that your Databricks
+environment and R session are correctly configured.</p>
+<div id="databricks-permissions" class="section level3">
+<h3>Databricks Permissions</h3>
+<p>The utility interacts with three different layers of Databricks
+security. You will need:</p>
+<ul>
+<li><strong>Catalog &amp; Schema</strong>: <code>USE CATALOG</code> on
+the target catalog and <code>USE SCHEMA</code> on the target
+schema.</li>
+<li><strong>Table Management</strong>: <code>CREATE TABLE</code>
+permissions on the target schema (required if
+<code>overwrite_table = TRUE</code>) or <code>MODIFY</code> and
+<code>SELECT</code> permissions on an existing table.</li>
+<li><strong>Staging Volumes</strong>: <code>READ VOLUME</code> and
+<code>WRITE VOLUME</code> on the Unity Catalog Volume used for staging
+(specified in the <code>volume_dir</code> argument).</li>
+</ul>
+</div>
+<div id="r-session-configuration" class="section level3">
+<h3>R Session Configuration</h3>
+<p><code>write_df_to_delta()</code> uses the Databricks REST API for
+high-speed data transfer. For the API to authenticate, you must have the
+following variables defined in your <code>.Renviron</code> file:</p>
+<ul>
+<li><code>DATABRICKS_HOST</code>: The URL of your workspace.</li>
+<li><code>DATABRICKS_TOKEN</code>: Your personal access token
+(PAT).</li>
+</ul>
+<p><strong>Tip:</strong> Before you start, use
+<code>check_databricks_odbc()</code> to verify that your connection and
+environment variables are correctly configured.</p>
+</div>
+</div>
+<div id="basic-usage" class="section level2">
+<h2>Basic Usage</h2>
+<p>Once your permissions are set, using <code>write_df_to_delta()</code>
+is straightforward. See the example below, or refer to the
+<code>write_df_to_delta()</code> help page for a full description of all
+available parameters.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(dfeR)</span>
+<span id="cb1-2"><a href="#cb1-2" tabindex="-1"></a><span class="fu">library</span>(DBI)</span>
+<span id="cb1-3"><a href="#cb1-3" tabindex="-1"></a><span class="fu">library</span>(odbc)</span>
+<span id="cb1-4"><a href="#cb1-4" tabindex="-1"></a></span>
+<span id="cb1-5"><a href="#cb1-5" tabindex="-1"></a><span class="co"># Establish your connection</span></span>
+<span id="cb1-6"><a href="#cb1-6" tabindex="-1"></a>con <span class="ot">&lt;-</span> DBI<span class="sc">::</span><span class="fu">dbConnect</span>(odbc<span class="sc">::</span><span class="fu">databricks</span>(),</span>
+<span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>                      <span class="at">httpPath =</span> <span class="fu">Sys.getenv</span>(<span class="st">&quot;DATABRICKS_SQL_PATH&quot;</span>))</span>
+<span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a></span>
+<span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="co"># Upload data frame to Delta Lake</span></span>
+<span id="cb1-10"><a href="#cb1-10" tabindex="-1"></a><span class="co"># The volume_dir is the path to your staging Volume in Unity Catalog</span></span>
+<span id="cb1-11"><a href="#cb1-11" tabindex="-1"></a><span class="fu">write_df_to_delta</span>(</span>
+<span id="cb1-12"><a href="#cb1-12" tabindex="-1"></a>  <span class="at">df =</span> my_data,</span>
+<span id="cb1-13"><a href="#cb1-13" tabindex="-1"></a>  <span class="at">target_table =</span> <span class="st">&quot;catalog.schema.my_table&quot;</span>,</span>
+<span id="cb1-14"><a href="#cb1-14" tabindex="-1"></a>  <span class="at">db_conn =</span> con,</span>
+<span id="cb1-15"><a href="#cb1-15" tabindex="-1"></a>  <span class="at">volume_dir =</span> <span class="st">&quot;/Volumes/catalog/schema&quot;</span>,</span>
+<span id="cb1-16"><a href="#cb1-16" tabindex="-1"></a>  <span class="at">overwrite_table =</span> <span class="cn">TRUE</span></span>
+<span id="cb1-17"><a href="#cb1-17" tabindex="-1"></a>)</span></code></pre></div>
+<div id="what-happens-during-execution" class="section level3">
+<h3>What happens during execution?</h3>
+<p>While the function runs, you will see progress updates in the R
+console. Because of the auto-retry logic, if the function encounters a
+network “blip” during the upload to the Volume or during the final
+clean-up/deletion, it will automatically retry the operation, ensuring
+your R session remains stable and your Volume stays clean.</p>
+<p><strong>Tip:</strong> If you prefer a silent execution, you can wrap
+the function in <code>suppressMessages()</code> to hide the progress
+updates.</p>
+</div>
+</div>
+<div id="advanced-usage" class="section level2">
+<h2>Advanced Usage</h2>
+<p>While <code>write_df_to_delta()</code> is designed to work “out of
+the box,” there are scenarios where you may need precise control over
+data types, memory management, or table behaviour.</p>
+<div id="precise-data-type-mapping-arrow-schemas" class="section level3">
+<h3>Precise Data Type Mapping (Arrow Schemas)</h3>
+<p>If you have specific requirements, such as ensuring a number is a
+<code>DECIMAL(18,2)</code> instead of a <code>DOUBLE</code>, you can
+pass an <code>arrow::schema()</code> directly into the function. This
+schema is applied during the Parquet conversion step.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(arrow)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>my_custom_schema <span class="ot">&lt;-</span> <span class="fu">schema</span>(</span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a>  <span class="at">transaction_id =</span> <span class="fu">int64</span>(),</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>  <span class="at">amount =</span> <span class="fu">decimal128</span>(<span class="at">precision =</span> <span class="dv">18</span>, <span class="at">scale =</span> <span class="dv">2</span>)</span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>)</span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">write_df_to_delta</span>(</span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="at">df =</span> financial_data,</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="at">target_table =</span> <span class="st">&quot;finance.audit.transactions&quot;</span>,</span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">db_conn =</span> con,</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">volume_dir =</span> <span class="st">&quot;/Volumes/main/default/staging/&quot;</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="at">schema =</span> my_custom_schema</span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+<div id="manual-chunking-for-memory-management" class="section level3">
+<h3>Manual Chunking for Memory Management</h3>
+<p>By default, the function handles data in 5 GB chunks. This value is
+chosen to safely navigate the Databricks REST API limit while
+maintaining high throughput.</p>
+<p><strong>Adjusting Chunk Size:</strong> You can use the
+<code>chunk_size</code> argument to fine-tune performance based on your
+specific dataset:</p>
+<ul>
+<li><strong>Decreasing the size</strong> (e.g., 1 GB): Use this if your
+local R session is running out of RAM e.g. during the Parquet conversion
+step.</li>
+<li><strong>Increasing the size</strong>: If you have a very “sparse”
+dataset, Parquet compression will be extremely high. In this case, you
+could increase the chunk size to process more data per upload since the
+resulting Parquet file will be well under the 5 GB REST API limit.</li>
+</ul>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="fu">write_df_to_delta</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>  <span class="at">df =</span> my_data,</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">target_table =</span> <span class="st">&quot;catalog.schema.my_table&quot;</span>,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">db_conn =</span> con,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">volume_dir =</span> <span class="st">&quot;/Volumes/main/default/staging/&quot;</span>,</span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>  <span class="at">chunk_size =</span> <span class="dv">1</span> <span class="sc">*</span> <span class="dv">1024</span><span class="sc">^</span><span class="dv">3</span>  <span class="co"># 1 GB in bytes</span></span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a>)</span></code></pre></div>
+<p><strong>The Stability vs. Speed Trade-off:</strong> Reducing the
+chunk size increases the total number of sequential operations performed
+by the function. This adds significant network overhead. We recommend
+sticking with the 5 GB default; the function will take longer to finish
+with smaller chunks.</p>
+</div>
+<div id="overwriting-vs.-appending" class="section level3">
+<h3>Overwriting vs. Appending</h3>
+<p>By default, <code>write_df_to_delta()</code> will append data to an
+existing table. If you want to overwrite the existing table, you must
+set <code>overwrite_table = TRUE</code>.</p>
+</div>
+</div>
+<div id="performance-benchmarks" class="section level2">
+<h2>Performance Benchmarks</h2>
+<p>We conducted a series of head-to-head tests of
+<code>write_df_to_delta()</code> against
+<code>DBI::dbWriteTable()</code>.</p>
+<div id="methodology" class="section level3">
+<h3>Methodology</h3>
+<p>Tests were performed on the DfE High Memory Desktop (AVD: 137 GB RAM,
+16 Cores). Benchmarks utilised a synthetic dataset comprising integers,
+numerics, characters, factors, logicals, Dates, and UTC timestamps. This
+ensures performance results account for the processing overhead
+associated with diverse SQL data types.</p>
+<p>To ensure statistical reliability and account for fluctuations in
+network traffic or cluster load, we carried out 10 independent runs for
+each data volume (rows), <span class="math inline">\(n\)</span>, where
+<span class="math inline">\(n \in \{10^2, \dots, 10^6\}\)</span>. The
+benchmarks presented below show the median execution time, with the
+error bars representing the interquartile range (<span class="math inline">\(25^{th}\)</span> to <span class="math inline">\(75^{th}\)</span> percentile).</p>
+</div>
+<div id="key-results" class="section level3">
+<h3>Key Results</h3>
+<p>As shown in the graph, for small datasets (&lt; 1,000 rows),
+<code>DBI::dbWriteTable()</code> is competitive. However, once you
+exceed 10,000 rows, the overhead of SQL-based inserts becomes a massive
+bottleneck. At 1 million rows, while <code>write_df_to_delta()</code>
+finishes in roughly 11 seconds, the standard DBI approach takes nearly
+30 minutes.</p>
+<div class="float">
+<img role="img" aria-label="Figure 1: Performance comparison between DBI and dfeR across increasing row counts." src="data:image/png;base64,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" alt="Figure 1: Performance comparison between DBI and dfeR across increasing row counts." />
+<div class="figcaption">Figure 1: Performance comparison between DBI and
+dfeR across increasing row counts.</div>
+</div>
+</div>
+<div id="recommendation-choosing-the-right-tool" class="section level3">
+<h3>Recommendation: Choosing the Right Tool</h3>
+<table>
+<colgroup>
+<col width="33%" />
+<col width="33%" />
+<col width="33%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th align="left">Dataset Size</th>
+<th align="left">Recommended Method</th>
+<th align="left">Reason</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td align="left"><strong>Small</strong> (&lt; 5k rows)</td>
+<td align="left"><code>DBI::dbWriteTable()</code></td>
+<td align="left">Lower overhead; no need for Volume staging.</td>
+</tr>
+<tr class="even">
+<td align="left"><strong>Medium</strong> (5k - 100k rows)</td>
+<td align="left"><code>write_df_to_delta()</code></td>
+<td align="left">Significant reduction in execution time compared to
+standard SQL-based inserts.</td>
+</tr>
+<tr class="odd">
+<td align="left"><strong>Large/Stress</strong> (&gt; 1M rows)</td>
+<td align="left"><code>write_df_to_delta()</code></td>
+<td align="left">The only viable method for high-volume transfers within
+a standard analytical window.</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div id="stress-tests" class="section level2">
+<h2>Stress Tests</h2>
+<p>To ensure <code>write_df_to_delta()</code> is ready for the DfE’s
+largest datasets, we pushed the utility to the practical limit of an R
+session’s memory: a synthetic dataset of 1 billion rows (~41 GB). While
+the smaller benchmarks focused on pure speed, the stress test evaluated
+stability and recovery over long durations.</p>
+<div id="methodology-1" class="section level3">
+<h3>Methodology</h3>
+<p>The stress tests were performed on the DfE High Memory Desktop (AVD).
+We used a synthetic dataset (comprising integers, numerics, characters,
+factors, logicals, Dates, and UTC timestamps) of up to 1 billion rows
+(~41 GB). We conducted 5 independent runs for each data volume (rows),
+<span class="math inline">\(n\)</span>, where <span class="math inline">\(n \in \{10^2,...,10^9\}\)</span>.</p>
+<p>A 1-billion-row dataset represents the practical maximum scale for a
+single R session on AVD. While the AVD hardware is robust, a
+10-billion-row dataset would exceed R’s in-memory capacity.</p>
+<p><strong>Note</strong>: Because these tests were conducted on a shared
+DfE cluster, execution times include the real-world impact of concurrent
+user activity and network contention.</p>
+</div>
+<div id="the-safety-net-resilience-at-scale" class="section level3">
+<h3>The “Safety Net”: Resilience at Scale</h3>
+<p>When moving bulk data, the biggest risk is the network. Because the
+internal functions that handle these uploads are hidden from the user,
+it is important to understand the built-in “safety net” that ensures
+your data actually arrives:</p>
+<ul>
+<li><p><strong>Patience for Large Payloads</strong>: We have configured
+a 10-minute (600s) “Transfer Safety” window for each chunk. This ensures
+that even if a 5GB payload is moving slowly across the network, it isn’t
+cut short prematurely.</p></li>
+<li><p><strong>Automatic “Self-Healing” Retries</strong>: If an upload
+hangs or fails due to a network flicker, the tool triggers an internal
+recovery loop. It will automatically attempt to re-upload the specific
+failed chunk up to 5 times, waiting for an increasing amount of time
+(exponential backoff) between attempts.</p></li>
+</ul>
+<p><strong>Why this matters</strong>: In the benchmarks, you may notice
+variability in execution times. This usually indicates the tool detected
+a network issue, waited for the safety window, and successfully retried
+the upload automatically.</p>
+</div>
+<div id="key-results-and-observations" class="section level3">
+<h3>Key Results and Observations</h3>
+<p>The boxplot below captures both the speed and the stability of the
+transfer across eight orders of magnitude.</p>
+<ul>
+<li><p><strong>Linear Scaling</strong>: <code>write_df_to_delta()</code>
+demonstrates consistent, predictable scaling even as it approaches the
+practical memory ceiling.</p></li>
+<li><p><strong>Automated Chunk Management</strong>: The Databricks REST
+API has a strict 5 GB limit per file. <code>write_df_to_delta()</code>
+automatically calculated and managed the 41 GB upload in 9 sequential
+chunks. This removes the need for analysts to manually slice their data,
+ensuring each piece stays under the API limit while maintaining maximum
+throughput.</p></li>
+<li><p><strong>Stability &amp; Memory Efficiency</strong>: Despite the
+massive data volume, the R session maintained a stable ~5 GB overhead.
+By streaming data in chunks, the utility avoids “double-buffering” the
+data in RAM, which prevents the RStudio crashes that may happen during
+large-scale exports.</p></li>
+<li><p><strong>Reliability Trade-off</strong>: Sequential chunking
+introduces a small amount of network overhead for each “slice.” While
+this makes the total execution time longer than a single (theoretical)
+massive upload, it is a necessary trade-off to ensure the transfer is
+fault-tolerant and bypasses REST API payload limits.</p></li>
+</ul>
+<div class="float">
+<img role="img" aria-label="Figure 2: Performance resiliency testing from 100 to 1 billion rows, showing stable execution times." src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqAAAAHgCAMAAABNUi8GAAABqlBMVEUAAAAAADoAAGYAOjoAOmYAOpAAZmYAZpAAZrYzMzM6AAA6ADo6AGY6OgA6Ojo6OmY6OpA6Zjo6ZmY6ZpA6ZrY6kJA6kLY6kNtNTU1NTW5NTY5NbqtNjshee6ZmAABmADpmAGZmOgBmOjpmOmZmZjpmZmZmZpBmg65mkJBmkLZmkNtmtpBmtrZmtttmtv9uTU1uTW5uTY5ubk1ubqtujqtujshuq+SOTU2OTW6OTY6Obm6Ojm6Ojo6OjsiOyP+QOgCQOjqQZgCQZjqQZmaQZpCQZraQkDqQkGaQtmaQtpCQtraQttuQ27aQ29uQ2/+rbk2rbm6rbo6rjqurq46ryKur5P+2ZgC2Zjq2kDq2kGa2kJC2tma2tpC2tra2ttu225C227a229u22/+2/7a2/9u2///Ijk3Ijm7IyI7I5KvI/+TI///YUj3bVUDbkDrbkGbbtmbbtpDbtrbbttvb25Db27bb29vb2//b/7bb/9vb///dfm/kq27kq47k/8jk///lhnfr6+v/tmb/tpD/yI7/25D/27b/29v/5Kv//7b//8j//9v//+T///9egFRPAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAdJ0lEQVR4nO2djX/URnqAtba5mr0Q2oTGTkKcQi65Qmtz6bUk14/4wrXNpbSGNsGEtE4KiWmvBAdyDXfxpSXZYrBZ9D93ZvQ10o6W0Uq7enf9vD+wd1ejRzPS45nR7EgKQoIQHEHbGSCIYYGghOhAUEJ0ICghOhCUEB0ISogOBCVEB4ISoqOGoJuBiflV9+KPukFwdnT6U7YaHL9RnuLIrvVj9Njrdjb074enks1lr3T07xzfHrriQH4LWXta/p5e1tmP+oIGwZJraU8vWRud/tStZg4MpGhGUGWj2cZeV29ubtt+ZWIne+lccTC/IwpaXtbZjyYEdR6m3pj2arrVYHF4slqVp64eu7EYm8HCjYcr+s8we2XCLWi2YiG/S+knvn87nmWd6aglqN7H/Y/M0Xh4QR2VM+r9wUrwwnowdyo2t39VHa7nb6SfX18PFu8cCzpnQ3UcO6ua86U+oGcj4H+r9U7oI/fwdPxhRra3Gj5cN7+zhf0LCrOwEQ7WoFkaxwb669HBV5Xjmn6TarOT1FwHxsgdtSR7pROoxCrU67SIhRXz+V3R23HWoNn6dv4Gy5qmMx+rzeuN7KifWdFnMBoSNGr89AfqKOoX70aCRu90ivjzb9bjOuEPgrgPsJPWL0mFsZg0ptarI8WDdkr/zhZGurjaUQvg2kBcDSYH3RL0xB2DM+qqBmFuO3ulEySCZkUsrJjL715cBQ8Kaq1v5W+wrFk6kwNdgOhP6pv1fAZmK5pp4vV+uqH32ZLej2pX3Yub+M2gc1HXHuY46s/1YT1r9u6S/rmo058ND05F9Uvwwq5KHPNMHWGRC1tVn1gL1Y+zzmrKBrg2oLa/FsbLbUG/XI2LkGjZ2cheRUkit7MiFlYs5Df6CxkU1Fo/y99gWfO7cs308RdNvq2iz2A0IehafBCTdtDsqV5cbS7Fr+PPIwfSnybpo49PBdHx0UdmJ62r/u/4dZtc2GpUOSYL1cuFi0kKWwAb4NqA+nCxpDvpJahVxMKK+fyaToZDUHv9LH+DZc2nWzTLjuzuRNlKij6DUV/Q4xfTBjNu1E1l14tbfm2H/hV/Hklp/7yTNsFRi5b5E4Y5cm6rC9cLC69qCU78JnQImqZxbcA0mAfO+sdLUKuIhRVz+Y0aboeg9vpZ/pxlTdOpv7bfrgR/uNL5J/OHnhV9BqN2H9REL2vtqwqqls2fubdeJqhFzrbaV4dkcbewUJ8LBYMdPTuNU1DdYLqHHHpD+6Degpq9FHXVKwualdVOt9ftvKdwm8EfRzs1LfoMRjOC5o93Jmi+iXcKao539D7nj0q899rF/IHPtrppjkdx4aN3Uw2LAljr5jegP/09q+9pRW/oWbx3Ez9c0HzTPShoUlY7nTk/0+17dmoUFX0GoxlB1R5buBF11HOC5nv2JYIGq+GdIC+oWjJ3Q9cdaxbZ3mo0yGItNBi1xoCgNsC1gbijsBQXwxa15zUOWjxJCsua+IGsOU6SXILGA0r2dnaSMyT9zir6DEYzgia9waxGyaqf/OcDgsYpCscnGxvKyLmtqo9zC+NhJkdHzwI4N2BWTUeOHIKWfpPUC6xhJlsPt6DDh5kK+Rssq72daIxJf7IU2kWfwWhI0KgbFA/IW4LGo8u7Yamg4d6poHN2oIUz4+jRiHpCzm91xxycbGH/mtrQvONU2Urj3oBGRQfXLWj5d/EXrIF6u4vgEtRMWRgyUL8blgoal9XazsFKUnlv5Io+g8FspujbmLbzQJQEghb6j4SsOPSCmq7dGGZdEc0Egq7Ek1IIkXHoBSVkB4ISogNBCdGBoIToQFBCdCAoIToQlBAdCEqIjlqC2hMSXbH3w2zhQ8fNB1yf5Ve3CeXbUBw7YfLa+mwY5+nbaHC9naDzvmO9QgmGxZCdNmpJJEcNQfvr0dwbr+8JXfvuafvTd3/rdC5BPVGTPKwHK2tVs1chKYLmYjOeC+Y10wJB020haJUYXVBdGSSh58zqqZ0/fL+bTVKP6oroZXSdcTw1OE4WfaYjTp5gkjnuUROfQvW35u8/s202t6QnXarPNhejxUt7P3wvnfSRvNabj1eyF5u1wx0zrT7KddSTSLe1FM0Hzs1kjldJcvbM3wdznyalW8oKnpQgWzVKux19oJMv6o0ly6P0e1EJXEXNoyPCC1bx012f5Kg3YxOXRxfU+nPtry+a/3tdVZvqw2iOd3ctPfTmpUmiK9xcsoSk0ujlWnujfrRc/4tTH6zoi+6jo65r7c1ntfHJNpJUhpfxk5XsxWZtpVyaa0tQkyyI0ibZtVZJc9aNxM7eZ6voz+xVTdq06FENmrxN0scfu4pqoxOCVfxs18d/at0Zm5lVQ9Bn0oscenpf9vRxWov2Urwo/zJKpo5HmiwR1Eqj49FuGKbV50aS2qydKPjMdv/n76mj9cx2KuhaCrD4yUr24kSHNNe2oGvZ6kl2rVXSnMVJiu+TLeRW1cvSolubjt9aeGdRC7kxSbPiF3b9+91Zu7azkRq0p+sK6zjr6xwWw4GXyU1usgY1JsRpermrfTqJoHFqUyHFLuua8/d/+0fbUY2SduwSQTN+spK92DTYaoGV61yO0g2mlxKlq1g5i9Pl3yclsFc1y+yiW+gkfSKoo6jF3ERNUVr8/K7vzt7U1vp90INXNwYEja+aKbxMTqcGBI3TJIfrYKWzkZnjOmqq89Vb7K+vricdVV9Bd4w2vSPfrC+FTxU0d32SWcXKWdzE59/3rE5EEpGgVtEtdBVB7Z2XFb8g6NrmrF0cUOMsPumeKbP0YGhvLl9PWS1Y/LLXsfuchUFOK7nZ6b1iDZo0ZnGSd9fCnR+8uvEUQa1m3KrzD17VZyBWrp2C9uwh3niVLGdRksL7tATWqlFFaxXdQifpC4LaRS3mJsKlxS/uet19naloZBzUOt3IdrBlyF50OmFWsA5nUgcnaRJMz9yTpCiofeYQVWU9c1VxxCkRND1Jygka3Y/JyrVO1l/v5AVNsmutYuUstcZ+nyDtVc0yu+gWOkkfl8BV1GJuzE7Lil/c9eHOjF0AWOubpM3km6RswCY+HYoWWC/NAdbJOlZttxkPiSRpkkEaxe3848paXlAz9vJeekWuuVJ8KeWUCJqsVBDUjNHYuda9tz99NS9okl17lSxnaQ87994eZsrVklbRbXRW4sWSog7kxuy0tPgDuz6qNmYnpuy7+N4oe3+klVqP6cx14zE9gvY68Ujq2FdqPaYz1+OJ6RE0viHRJFZqPaYz12OJKRKUOIyBoIToaFBQxy2O9GllOn/RmsiYGwEliPJoTlB7dlMS9mi8LSWCEp7RnKAu6RCUqBmNCWqmOlozOWM7308mfWYzQhezgWc9OdRMl/SYV0kcymi2BrVmcubmYSTLrS/mssmhi2HoM6+SOJTRrKDWTE6noNbcjdzkUJ95lcShjKb7oPn5kQOCZpPDcpNDfeZVEocymm7i8/Mj45c7iYm2oPb8Rp95lcShjGYFdcyPzNeg2ezFwvzGp8+rJA5lNCxoPD/Sml+Z9iCTk570JMmaHOozr5I4lNFwHzSeH2nPr0wmfaYzQq1hpmRyqM+8SuJQBt/FE6IDQQnRgaCE6EBQQnQgKCE6EJQQHQhKiA4EJUQHghKiY3RBjxLEGKO+oBXSfj/yVsaIgiSZhKCQRJMQFJJoEoJCEk1CUEiiSQgKSTQJQSGJJiEoJNEkBIUkmoSgkESTEBSSaBKCQhJNQlBIokkICkk0CUEhTZp0+4vb/okRFNKESbe/+913t71TIyikCZMQFJJoEoJCkk2iDwppdkgICkk0CUEhiSZ5CPpgefmlW2H4+K3ll+8PITSds4mhIEkmPV3Q/Tdvhd+eDJ9cekf/Kic0nbOJoSBJJvk18UrSxz+7pX89ufzB8vJ5VameLxKaztnEUJAkk/wEVVXn/k/vh4/fvvLkknp57qSpV+O7inxPEGMLH0H3z714JXzwciTo5Suh/q9eFhT3CWpQSBVJfjWo0jGpQREU0iRJnsNMN99J+6AICmmCpKcLmrTtl86bk3kEhTRJkkcN+u3ysuqDxuOgCAppoiS+SYIkmoSgkESTEBSSaBKCQhoLqe4tv1NO/BtBITVKQlBIokkICkk06eiPy+OVIcsQFNJESAgKSTQJQSGJJtEHhXQoSAgKSTQJQSGJJiEoJNEkBIUkmoSgkESTEBSSaBKCQhJNQlBIokkICkk0CUEhiSYhKCTRJASFJJqEoJBEkxAUkmgSgkKaNImnfECSTOI5SZBEkxAUkmgSgkKSTaIPCml2SAgKSTQJQSGJJiEoJNEkBIUkmoSgkESTEBSSaBKCQhJNQlBIokkICkk0CUEhiSYhKCTRJASFJJqEoJBEkxAUkmgSgkISTUJQSKJJCApJNAlBIYkmISgk0SQEhSSahKCQRJMQFJJoEoJCEk1CUEiiSQgKSTSpRNB7X12/l73bf/NWGD5+a/nl+0MITedsYihIkkkOQfvXjgUm5ld3zQcPll+6FT659E747ckhhKZzNjEUJMmkAUH7V7vKzWdVqF+ds+qTmy9+qGrQxz+7pWvSJ5c/WF4+/0D9LxKaztnEUJAkkwYEPVhZuBhVnGH/7um5bf1CN/H7P70fPn77ypNLJ8P9cyejVj88quN7ghhbeJ0kaRsfvBwJevlKqP+rlwXFfYIaFFJFklvQ/sc/Ov75J+lbuwZFUEiTJDkF3VPd0LnPVpaS9/t2HxRBIU2Q5BR0M3iuqwQ9EvdFjaBPLp3XZ/EICmmiJJegByvKTv1vO/7AGgdFUEgTJZUL+mk3FdSL4BMICqkiqaSJn+92jgWLlQg+gaCQKpKcgvbX9RdJC14VKIJCGiepZBz0662t6xUJPoGgkCqSmM0ESTTJ8VVnkAQnSZBaJyEoJNEkmnhIokluQR9t6fhbalBIbZOcgu7QxEMSQnIJaoZB54OFi5UIPoGgkCqSSr7q/PznG3tdvkmC1DqpRNDtnbWDFZp4SK2T3E383HZv/jR9UEjtk5wnSb1ntvVwKE08pNZJpeOgj7Y+KX40nOATCAqpIskt6N3Xtg9eXa1G8AkEhVSR5G7iVfdTtfFLjvTlBJ9AUEgVSSXjoGfD8E6QXpPkRfAJBIVUkVQ2zJT89Cf4BIJCqkhyC9rZ0NceIyik1kll38UfP80wEyQBJPc1SRf0XJHnvbqgCAppnKSScdD+1pafnggKaayk0oH6e7+pSPAJBIVUkeQQ9M7xbXN3Ji47htQ+aVDQnWBuO7ownpMkSK2TBu+wrEfpe0GwxjATJAEkx1Wd5mvOI7sM1EMSQHII2tnYURUoA/WQJJAG+6CbUffzYJ0+KKT2SYOC9q8GwYld/TAFzuIhtU4qHQft/7oiwScQFFJFEncWgSSahKCQRJMQFJJoEoJCEk1CUEiiSU5BH92LgmuSILVNcl/ykdzC1mcoFEEhjZHkFPR0N+iof8e8JjQhKKQxkkqe1bkahnc6G15fxyMopDGSym4ephv6I7/1mdCEoJDGSBp62fEvfW5wh6CQxkgqeRSiuez4Byv0QSG1TBryKETVwnMWD6llUslA/aOtLa7qhCSAVCLo3dff8HuEAoJCGitpWBPPnUUgtU4qOUnqnLnW5ZIPSO2TuLsdJNEk7g8KSTSp5A7La/o+4NxhGVLrpLL7gy6cCrhHPaT2Se5hpqv6LP5ENYJPICikiqSy+4N+9Qn3B4UkgFR+yUf/F2/QB4XUNqlcUM7iIQkgISgk0SQEhSSahKCQRJMQFJJokuMGtsk1xz7Xe4QICmmsJASFJJrErW8giSYhKCTRJEcTv3Ax/gapf/c0lx1Dapc0+Jykq13V/XxWhfrVOetPaDpnE0NBkkxyNPH9a8eik6T5VZ8v4xEU0hhJJX3Qe19fv1eR4BMICqkiiZMkSKJJCApJNAlBIYkmISgk0SS3oP2Pf3T880+qEXwCQSFVJJXcYTkI5j5b4apOSK2TSm5981xXCcp18ZBaJ5XcWeQz84/ZTJDaJpUL+in3ZoLUPqmkiZ/vdo5xdztI7ZOG3B/U5/7fIYJCGiupZBz0662t6xUJPoGgkCqSyiaL6PC7Sz2CQhojySlor8s1SZBkkEruDxrMP/vss8cRFFLbpPI7LFcl+ASCQqpIcg8z6XvUVyX4BIJCqkgqGWbqvK6C2y9Cap1UdgtwTpIgiSC5+6DBc9SgkESQyp8XX5XgEwgKqSKppIlfrU7wCQSFVJFU0sTTB4Ukg4SgkESTnE38o3t8Fw9JBomrOiGJJjnubjf3GU08JCkkBIUkmjR4+0XPB8wNEHwCQSFVJLlq0Aqj9CGCQhorCUEhiSY5BO2YL+L5Lh6SBBKPoYEkmkQNCkk0iT4oJNEkBIUkmjQo6Gm/izkHCD6BoJAqkvguHpJoEoJCEk1CUEiiSQgKSTQJQSGJJnF3O0hWHB0txpgn7m4HyYoRBa1oaF1B9d3tOtzd7jCSjv64PF4pXzRhQQ9WuHnYISVNh6DcWeTQkqZDUNUHfcH/sg8EnSHSdPRBuXEDJDEkBIUkmsRAPSTRpBJB777+xsWKBJ9AUEgVSUOeNOf3sGMEhTROUsmzOjtnrnV5Viek9knlA/V7PO0YUvuk8uck+V6chKCQxkgq+S5+LQx7A53Q/TdvDSE0nbOJoSBJJpU9hmbhVBAs5ZM+WH4JQSFNmOQeZrqqz+JP5FPefPFDVYM+ufzB8vL5B+p/kdB0ziaGgiSZVDIO2v/qk8FBJt3EP7l0Mtw/dzJu7s33sN8TxNiiyjdJRtDLV8z/x29fKSjuE9SgkCqSqtxhGUEhTZyEoJBEk2jiIYkmOQfqze2ZHp52jYMiKKSJkgYF7X/1b93OP2xt/StfdUJqn+SoQTeTOyz7TWdCUEhjJDkE3TsVBPP6qmO/SzsRFNIYSeV90KoEn0BQSBVJPEwWkmgSF81BEk1yN/GqB6oE5dY3kFonlQ/U3ylOt3sKwScQFFJFUrmgBysMM0FqnTSsBqUPCql10rCTJGpQSK2Thgi6cKMSwScQFFJFEre+gSSa5Bb07mvbB6+uViP4BIJCqkhy3x9UnR+pdp5hJkitk0quiz+rz+I5SYLUOok7i0ASTeLeTJBEk8ruLHL8dMDd7SC1T3LfH/SCHgd9nvuDQmqdVHZnka0t3+d8ICikMZLcgvY//tHxzz+pRvAJBIVUkeQUdK8bBHOfrTAOCql1UsktwJ/rKkEZB4XUOqlkHPQz849hJkhtk8oF/ZRxUEjtk0qa+Plu5xjjoJDaJw15TtKC38XxCAppjKSScdCvt7auVyT4BIJCqkhy9kH/zpy+P3yNPiiktknuk6SFjbD/ERfNQWqf5JwPejUInj8VdFYrEXwCQSFVJLn7oHe63tfMISikcZLcZ/H6OUmds9UIPoGgkCqSSi477ly81uWSD0jtk9yCnlBqPjzFSRKk1knOk6RfR78+RlBIbZOG3LjhETewhdQ6yfUgr+3+L97Y5apOSBJITkGNmwgKSQAJQSGJJiEoJNEkBIUkmoSgkESTHIImT0JkNhOk9kkICkk0iTssQxJNQlBIokkICkk0CUEhiSYhKCTRJASdbdLtL243hULQSiFQBoGk29/97rvbDbEQtFLIk0EiCUERVDQJQRFUNok+KIJCGicJQSGJJiEoJNEkBIUkmoSgkESTEBSSaBKCQhJNQlBIokkICkk0CUEhiSYhKCTRJASFJJqEoJBEkxB0BkhHR4xx5qkpEoLOAAlBfQg+gaBjIR39cXm8Ur4IQQcCQcdCogb1IfhEg4JW3LtDYvoFHRbTvp8QVKRWkJJA0Kk/hLNNQtCpP4SzTULQqT+Es01C0Kk/hLNNQtCpP4SzTULQqT+Es01C0Kk/hLNNQtCpP4SzTULQqT+Es01C0Kk/hLNNQtCpP4SzTULQqT+Es01C0Kk/hLNNQtCpP4SzTULQqT+Es01C0Kk/hLNNQtCpP4SzTRIt6CxfawPJL2QLOsNXK0LyCwSd+kM42yQElXgIp/7pRs2RvAXdf/NWGD5+a/nl+yUEn0BQr5j+58M1R/IV9MHyS7fCJ5feCb89WULwCQT1CgTNwlPQmy9+qGrQxz+7ZWrSB8ta1wKhytZ8kyNo7ZBXujE28fs/vR8+fvuK9jSqSM2gzvf+USWtTv7KSFFxKwLjiy++aDsLUqKSoA9ejgR9+4pD8Sp/Dr7JZ7oGncgg76GsQcP9c8svpo4i6IgkvobwiUqCJn1QFQ/Ss3kEzfJbLTWCekQlQZ9cOq87n1rOIYI2t+NnW9BhMe1aNUcaaRz05tCz+CFaDbHKpRWCQhrDN0kIWj+mXavmSLIFnbJeGoI2T0JQBBVNki3okOTNNfGce0smISiCiiaNQ9DGDuFkZKgo6ET+aKZdq+ZIogWttNmRA0Elk0Q38cOira8VEXSypKmtQVsTVGDpZpk02Us+mmuXqwo6kXqPYabmSQhKwyyaJPqiueZQNMzTSjokgkKaVhKCQhJNQlBIokkICkk0CUEhiSYhKCTRJASFJJqEoJBEkxAUkmgSgkISTUJQSKJJCApJNAlBIYkmISgk0SQEhSSahKCQRJMaEJQgxhi1Ba0ks0QUpGkgISgk0SQEhSSaNBlBCWLEQFBCdCAoIToQlBAdCEqIjvEKaj8ixPXE5Oq0mFh8su2ImapBGyxazayZ0p3Ta9/MHqVSJ1t1YI7S1ctaVLplFe9UW3GsgtqPSnY+Mbk6LXpsU8VClmZqdJqjaPWyFpXuJ39+P3z8l2+OLGiucKPDXKWrlbX02CnOlacnt2KcguYelWw9ra4OTSHq+ZnL1Mg0V9FqZS0p3V9dCff/euTdVCjcqDB36WpkLT12YfjkshxBcw/6TJ73WZf25n/V8rOQqdFpg0WrmbWodP/5Tvg/H9b4O84VbnSYq3S1spZ2zzSuSoxf0PhRyfGvurT9n/zZcq2OQi5TNWiDRauZtegQ/uovnvzzr2oKmuSnBsxRunpZy/qgFU9Epq4GPXf+8VvnG8vU6DRHHVMva3H78C//+zd1ekL55mFkmLN9qJO1tAat2gsav6BN9UGzQlbtZ5dnqgZtsGg1sxaX7j8+OF9X0Cw/I8OcpauTtVTQ8KY0QeNHJce/6tJMIb+tNV5lZaoGbbBoNbMWl+7Bi1fqCprlZ2SYs3R1spYNEVZsRadyHPTJpTqk4jjoaLSScdDRsxaXLq6KR4184UaGOUtXJ2syx0EJom4gKCE6EJQQHQhKiA4EJUQHghKiA0ErxcFKsKR+7XXntkuWlyzIxcNTQbAW0XR0zjaax9kKBK0USqnORm1BN4OcoIGRnnAGglYKrdRiA4Kuxam17eFOcGS3wTzOViBopTB13poR1Liof/SChQvBwvaX3c6afv/LbrBwIwz717pBZ9VI+Hp37oZZ+0v10Znd/rpiGCVjQSPdk4Xqo55evNnZuNMNDOswB4JWCqXU+0qngqA65o11caOtlmzGbbf5JKpWo48WBwQ1NWi8UL1ZUv87G/31uU+7QbruoQ0ErRRaqc1gqSDo3A0l6Vr0ofJrb0W/UVXfw5X4ExN73c5F9UNVwFkTH/dB17KFe90j36wb2mKPph9BK4YWNK5FLUGP7CbGRn1QpXBUrQYm9Ua0bk/3XvWyoqDP37AWqprz31ee6y7uBGsH6mR//sxvWiusiEDQSmF06wXzg4Lq5n1QUGXZUEFVU/6RGRfIFu4Erwer60fe1aC7F44FyeqHNBC0UhjddCfStN2ryqaioMELuw9NEx+fGGWCxq24eps/i9cMa2FPwzfjXqre1lo7RRUSCFopIqVUX3Fu25zrBIOCBtEp0Gb8IhM0PQ8qCKpA1kmSbveP7Pb0+VUv7iW0V1wBgaCVItZt01R6p4LOnww28ckw01V1Dv78rlWDRiNPZ3YHxkGV70vZQrV0MV5y51gQLBxuPxGUkB0ISogOBCVEB4ISogNBCdGBoIToQFBCdCAoIToQlBAdCEqIjv8HLGq0ge1EQqAAAAAASUVORK5CYII=" alt="Figure 2: Performance resiliency testing from 100 to 1 billion rows, showing stable execution times." />
+<div class="figcaption">Figure 2: Performance resiliency testing from
+100 to 1 billion rows, showing stable execution times.</div>
+</div>
+</div>
+</div>
+<div id="troubleshooting" class="section level2">
+<h2>Troubleshooting</h2>
+<p>The <code>write_df_to_delta()</code> function includes extensive
+validation checks. In most cases, if an error occurs, the console will
+provide a specific, descriptive message detailing the issue. <strong>If
+you encounter an error, please read the console output
+first</strong>.</p>
+<ul>
+<li><strong>Data Type &amp; Schema Mismatches</strong>: If you are
+appending to a table, you must ensure that your R data types are
+compatible with the existing Delta table schema. Even when overwriting
+the table, conflicts can arise during the three-layer mapping process:
+the R class, the Apache Arrow schema (used for Parquet conversion), and
+the Databricks SQL type.
+<ul>
+<li>If you hit a mismatch, try explicitly casting your R columns before
+running the function to ensure the Arrow conversion maps correctly to
+the target SQL types.</li>
+<li>Use the <code>column_types_schema</code> argument to enforce precise
+types (e.g., <code>arrow::timestamp(&quot;us&quot;)</code> or
+<code>arrow::utf8()</code> for factors). This ensures the Parquet file
+strictly matches the expectations of the Databricks
+<code>COPY INTO</code> command. See <a href="#precise-data-type-mapping-arrow-schemas">Precise Data Type
+Mapping (Arrow Schemas)</a>.</li>
+<li>Pay close attention to decimal scales and timestamp precisions
+(seconds, milliseconds, or microseconds), as these must align with the
+target SQL column to avoid ingestion failures. Avoid nanosecond
+(<code>ns</code>) precision, as it is often incompatible with Databricks
+runtimes.</li>
+</ul></li>
+<li><strong>Permission &amp; Authentication Errors</strong>: If your
+message mentions missing access or failed handshakes, ensure your
+<code>.Renviron</code> is configured correctly and that you have the
+necessary permissions to the target catalog, schema and Volume; see <a href="#prerequisites-permissions-and-authentication">Permissions and
+Authentication</a>.</li>
+<li><strong>Network Timeouts or “Hangs”</strong>: If the progress bar
+appears to stall, the utility is likely managing a network flicker using
+its internal retry loop. You can read about this in <a href="#the-safety-net-resilience-at-scale">The “Safety Net”: Resilience
+at Scale</a>.</li>
+<li><strong>Performance Variability</strong>: Fluctuations in execution
+time are typically due to shared cluster load or network traffic on the
+DfE environment. Variability can also occur when the function triggers
+internal retries to recover from transient network failures.</li>
+</ul>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

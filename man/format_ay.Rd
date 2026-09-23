@@ -7,10 +7,10 @@
 format_ay(year)
 }
 \arguments{
-\item{year}{Academic year}
+\item{year}{Academic year, a single value or a vector}
 }
 \value{
-Character vector of formatted academic year
+Character vector of formatted academic years
 }
 \description{
 This function formats academic year variables for reporting purposes. It
@@ -22,11 +22,12 @@ It accepts both numerical and character arguments.
 \examples{
 format_ay(201617)
 format_ay("201617")
+format_ay(c(201617, 201718))
 }
 \seealso{
-Other format: 
-\code{\link{format_ay_reverse}()},
-\code{\link{format_fy}()},
-\code{\link{format_fy_reverse}()}
+Other format:
+\code{\link[=format_ay_reverse]{format_ay_reverse()}},
+\code{\link[=format_fy]{format_fy()}},
+\code{\link[=format_fy_reverse]{format_fy_reverse()}}
 }
 \concept{format}

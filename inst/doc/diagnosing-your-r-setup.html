@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Diagnosing your R setup</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Diagnosing your R setup</h1>
+
+
+
+<p>If you are struggling with R, Git or <code>renv</code> on your DfE
+laptop, the <code>diagnostic_test()</code> function in <code>dfeR</code>
+can help you work out what is going on. It runs a series of checks
+against your machine and reports which settings look healthy and which
+are likely to be causing you trouble.</p>
+<p>By default the function is read-only and only tells you what it has
+found. If you would like it to attempt to fix things for you, you can
+run it with <code>clean = TRUE</code>, but you should always run it once
+without that argument first so that you can see what would change before
+anything is altered.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a>dfeR<span class="sc">::</span><span class="fu">diagnostic_test</span>()</span></code></pre></div>
+<div id="reading-the-summary" class="section level2">
+<h2>Reading the summary</h2>
+<p>Each check finishes with a status. The summary line at the bottom of
+the output tells you how many checks fell into each category:</p>
+<ul>
+<li><strong>PASS</strong> means the check found nothing to worry
+about.</li>
+<li><strong>FAIL</strong> means the check found a setting that is likely
+to cause problems. Running with <code>clean = TRUE</code> will attempt
+to fix most of these.</li>
+<li><strong>FIXED</strong> means the check found a problem and was able
+to fix it during this run (you only see this when you call the function
+with <code>clean = TRUE</code>).</li>
+<li><strong>INFO</strong> is for checks that simply report information
+back to you, such as the path to your global Git config file. These are
+never failures.</li>
+</ul>
+<p>If everything has come back as <strong>PASS</strong> or
+<strong>INFO</strong>, you can stop here. If anything has failed, the
+rest of this vignette walks through each check in turn and explains what
+to do.</p>
+</div>
+<div id="proxy-settings" class="section level2">
+<h2>Proxy settings</h2>
+<p><code>check_proxy_settings()</code> looks for proxy entries in your
+global Git config (<code>http.proxy</code>, <code>https.proxy</code>)
+and in the system environment variables (<code>http_proxy</code>,
+<code>https_proxy</code>, <code>no_proxy</code>).</p>
+<p>These settings used to be needed inside the DfE network years ago,
+but they now prevent Git from connecting to GitHub and Azure DevOps. If
+you see an error like:</p>
+<pre><code>fatal: unable to access &#39;https://...&#39;: Could not resolve proxy: mwg.proxy.ad.hq.dept</code></pre>
+<p>then this is almost certainly what is causing it.</p>
+<p>Running <code>check_proxy_settings(clean = TRUE)</code> will clear
+the Git config entries and remove the proxy environment variables. On
+Windows it clears the environment variables permanently from your user
+environment, not just for the current R session, so they will not come
+back when you open a new R session. Windows only applies environment
+changes to <em>new</em> processes, so close and reopen RStudio
+afterwards for the change to be picked up everywhere.</p>
+<p>If you would rather change the Git config by hand, you can run this
+from a terminal:</p>
+<pre><code>git config --global --unset http.proxy
+git config --global --unset https.proxy</code></pre>
+</div>
+<div id="git-ssl-verification" class="section level2">
+<h2>Git SSL verification</h2>
+<p><code>check_git_sslverify()</code> looks at the
+<code>http.sslverify</code> and <code>https.sslverify</code> keys in
+your global Git config. A historic DfE setup script set these to
+<code>false</code> to work around SSL certificate problems on the
+internal network. That is no longer necessary, and leaving SSL
+verification disabled is not something you want on a long-term
+basis.</p>
+<p>Running <code>check_git_sslverify(clean = TRUE)</code> will set both
+keys back to <code>true</code>.</p>
+<p>If you turned SSL verification off recently because you were seeing a
+genuine SSL certificate error from R, Git or another tool, turning it
+back on will bring that error back. The right next step in that case is
+to contact the <a href="mailto:statistics.development@education.gov.uk">Statistics
+Development Team</a> with the command you were running and the error
+message you saw, so we can work with the Network Operations team to
+unblock the underlying request.</p>
+</div>
+<div id="global-.gitconfig-location" class="section level2">
+<h2>Global .gitconfig location</h2>
+<p><code>check_gitconfig_location()</code> reports the path that Git is
+using for your global config file. It does not change anything; it only
+tells you where Git, R and RStudio think your global config lives.</p>
+<p>This check fails when your global <code>.gitconfig</code> is inside
+OneDrive. When that happens, Git, R and RStudio can disagree about which
+config file is in effect, and changes you make in one tool may not be
+picked up by the others.</p>
+<p>There is no automatic fix for this one because it is a Windows-level
+change rather than something R can do for you. The recommended location
+is <code>C:/Users/&lt;username&gt;/.gitconfig</code>. You will need to
+move the file there yourself, and you may also need to set the
+<code>HOME</code> environment variable on your machine so that
+everything agrees on where your home directory is.</p>
+</div>
+<div id="github_pat" class="section level2">
+<h2>GITHUB_PAT</h2>
+<p><code>check_github_pat()</code> looks at the <code>GITHUB_PAT</code>
+system environment variable. When this variable is set, R can fail to
+install packages from GitHub (including <code>dfeR</code> itself, and
+<code>dfeshiny</code>) with an error like:</p>
+<pre><code>ERROR [curl: (22) The requested URL returned error: 401]</code></pre>
+<p>For your safety, the diagnostic only ever shows the last four
+characters of the value, and the returned object only contains the
+masked version. The raw token never appears in the output, so it is safe
+to share the result of <code>diagnostic_test()</code> with a
+colleague.</p>
+<p>Running <code>check_github_pat(clean = TRUE)</code> clears the
+variable for the current R session. If the variable comes back the next
+time you start R, something on your machine is setting it for you, often
+a credential manager or another bit of software, and you will need to
+find and disable whichever that is. The function prints a reminder about
+this when it clears the variable.</p>
+</div>
+<div id="renv-download-method-.renviron" class="section level2">
+<h2>renv download method (.Renviron)</h2>
+<p><code>check_renv_download_method()</code> looks for the
+<code>RENV_DOWNLOAD_METHOD</code> entry in your <code>~/.Renviron</code>
+file. <code>renv</code> can download packages using either
+<code>curl</code> or <code>wininet</code>, and <code>wininet</code> does
+not work from within the DfE network. If you see a <code>renv</code>
+error like “wininet” failing to download packages, this is the setting
+to change.</p>
+<p>Running <code>check_renv_download_method(clean = TRUE)</code> will
+rewrite <code>~/.Renviron</code> to set
+<code>RENV_DOWNLOAD_METHOD=&quot;curl&quot;</code>, removing any previous
+assignments of the same variable. If you would rather change the file
+yourself, you can open it in RStudio with:</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>usethis<span class="sc">::</span><span class="fu">edit_r_environ</span>()</span></code></pre></div>
+<p>and add the line:</p>
+<pre><code>RENV_DOWNLOAD_METHOD=&quot;curl&quot;</code></pre>
+<p>You will need to restart R after editing <code>.Renviron</code> for
+the change to take effect.</p>
+</div>
+<div id="renv_download_file_method" class="section level2">
+<h2>RENV_DOWNLOAD_FILE_METHOD</h2>
+<p><code>check_renv_dl_file_method()</code> looks at the
+<code>RENV_DOWNLOAD_FILE_METHOD</code> system environment variable. The
+legacy DfE setup script set this to <code>wininet</code>, which breaks
+<code>renv</code> outside the DfE network and is no longer needed.</p>
+<p>Running <code>check_renv_dl_file_method(clean = TRUE)</code> will
+remove the variable. On Windows it clears it both for the current R
+session and permanently from your user environment, so it will not come
+back the next time you start R. As with the proxy variables, Windows
+only applies the change to new processes, so close and reopen RStudio
+afterwards.</p>
+</div>
+<div id="rtools" class="section level2">
+<h2>RTools</h2>
+<p><code>check_rtools()</code> looks for <code>make</code> on your
+<code>PATH</code>, which on Windows tells us whether RTools is
+installed. Some R packages need to be compiled from source, and on
+Windows that requires RTools. A missing <code>make</code> will often
+show up as a “cannot find make” error during
+<code>renv::restore()</code> for older package versions that have to be
+built from source.</p>
+<p>This check is reported as <code>INFO</code> rather than as a failure
+when <code>make</code> is missing, because plenty of users do not need
+to compile packages from source. If you do need it, the easiest way to
+get RTools at the DfE is from the Software Centre. Pick the version that
+matches your version of R, install it, then close and reopen
+RStudio.</p>
+<p>If you cannot find RTools in the Software Centre, you can also
+install it directly from the <a href="https://cran.r-project.org/bin/windows/Rtools/">CRAN RTools
+page</a>.</p>
+</div>
+<div id="renviron-.rprofile-location" class="section level2">
+<h2>.Renviron / .Rprofile location</h2>
+<p><code>check_renv_rprof_location()</code> reports where R will read
+your <code>.Renviron</code> and <code>.Rprofile</code> from. R can read
+these files from more than one place, so the check lists every location
+it consults, in the order R uses them: the <code>R_ENVIRON_USER</code> /
+<code>R_PROFILE_USER</code> environment variable if you have set one,
+then a copy in your current working directory, then a copy in your home
+directory. Each file that exists is listed, and the one R actually uses
+is tagged. It does not change anything; like the gitconfig check, it
+tells you where things are.</p>
+<p>This check is always <code>INFO</code> — it never fails. Its value is
+in spotting surprises. The most common one is finding the same file in
+more than one place: a stray <code>.Renviron</code> or
+<code>.Rprofile</code> sitting in a project folder will quietly take
+precedence over the one in your home directory, so settings you thought
+you had changed at home are being ignored. If you see a copy you did not
+expect, delete the one you do not want.</p>
+<p>If any of the listed paths sits inside OneDrive, the check adds a
+note. R, RStudio and Git can resolve <code>~</code> inconsistently when
+your home directory is redirected into OneDrive, so changes you make in
+one tool may not be picked up by another. The fix is a Windows-level
+change rather than something R can do automatically: set the
+<code>HOME</code> environment variable explicitly to a path outside
+OneDrive (for example <code>C:/Users/&lt;username&gt;</code>) and make
+sure your <code>.Renviron</code> and <code>.Rprofile</code> live
+there.</p>
+</div>
+<div id="sharing-the-full-output-with-support" class="section level2">
+<h2>Sharing the full output with support</h2>
+<p>If you have worked through the failed checks and are still stuck, you
+can run the diagnostic in <code>full</code> mode, which appends a
+session dump containing <code>renv::diagnostics()</code>,
+<code>Sys.getenv()</code> and <code>options()</code>:</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>dfeR<span class="sc">::</span><span class="fu">diagnostic_test</span>(<span class="at">full =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>The function masks values for any environment variable whose name
+contains <code>TOKEN</code>, <code>SECRET</code>, <code>KEY</code>,
+<code>PAT</code>, <code>PASSWORD</code> or <code>CRED</code>, so your
+<code>GITHUB_PAT</code> and similar tokens are not shown in full.</p>
+<div id="troubleshooting" class="section level3">
+<h3>Troubleshooting</h3>
+<p>A few common issues come up alongside the ones the diagnostic checks
+for. These are not currently part of <code>diagnostic_test()</code>, but
+they are documented in the <a href="https://dfe-analytical-services.github.io/analysts-guide/learning-development/r.html">Analysts’
+Guide</a>:</p>
+<ul>
+<li><strong>Cannot restore from an old <code>renv.lock</code></strong>
+when several older package versions fail to build. Assuming you’re on
+the right version of R for the lockfile, and have ensured RTools is
+installed as described on this page then have a look at the analysts’
+guide, which covers using <code>renv::install()</code> and
+<code>renv::record()</code> to update individual packages, or
+<code>renv::init()</code> to discard the old lockfile entirely.</li>
+<li><strong><code>shinytest2</code> errors about an invalid path to
+Chrome, or about old headless mode.</strong> The guide explains setting
+<code>CHROMOTE_CHROME</code> and <code>CHROMOTE_headless</code> in your
+<code>.Renviron</code>.</li>
+<li><strong>SSL certificate errors from R or Python.</strong> If a
+request is being blocked by the DfE firewall, contact the <a href="mailto:statistics.development@education.gov.uk">Statistics
+Development Team</a> with the command and error so we can escalate it to
+the Network Operations team.</li>
+</ul>
+<p>If you have run through everything here and are still seeing
+problems, please get in touch with the <a href="mailto:statistics.development@education.gov.uk">Statistics
+Development Team</a> with the output of
+<code>diagnostic_test(full = TRUE)</code> attached.</p>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

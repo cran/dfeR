@@ -10,7 +10,7 @@ fetch_regions()
 data frame of unique location names and codes
 }
 \description{
-Fetch regions
+Fetch a data frame of all regions based on the dfeR::regions file.
 }
 \examples{
 
@@ -25,6 +25,12 @@ head(fetch_pcons(countries = "Scotland"))
 
 head(fetch_pcons(year = 2023, countries = c("England", "Wales")))
 
+head(fetch_mayoral())
+
+head(fetch_lsips())
+
+head(fetch_lsips(2025))
+
 fetch_lads(2024, "Wales")
 
 fetch_las(2022, "Northern Ireland")
@@ -34,10 +40,12 @@ fetch_regions()
 fetch_countries()
 }
 \seealso{
-Other fetch_locations: 
-\code{\link{fetch_countries}()},
-\code{\link{fetch_lads}()},
-\code{\link{fetch_las}()},
-\code{\link{fetch_wards}()}
+Other fetch_locations:
+\code{\link[=fetch_countries]{fetch_countries()}},
+\code{\link[=fetch_lads]{fetch_lads()}},
+\code{\link[=fetch_las]{fetch_las()}},
+\code{\link[=fetch_lsips]{fetch_lsips()}},
+\code{\link[=fetch_mayoral]{fetch_mayoral()}},
+\code{\link[=fetch_wards]{fetch_wards()}}
 }
 \concept{fetch_locations}

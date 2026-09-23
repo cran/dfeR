@@ -8,7 +8,7 @@
 \description{
 \if{html}{\figure{logo.png}{options: style='float: right' alt='logo' width='120'}}
 
-Preferred methods for common analytical tasks that are undertaken across the Department, including number formatting, project templates and curated reference data.
+Provides preferred methods for common analytical tasks undertaken across the Department for Education in England, including number formatting, project templates and curated reference data.
 }
 \seealso{
 Useful links:
@@ -24,6 +24,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Cam Race \email{cameron.race@education.gov.uk}
   \item Laura Selby \email{laura.selby@education.gov.uk}
   \item Adam Robinson
 }
@@ -36,6 +37,8 @@ Other contributors:
   \item Rich Bielby \email{richard.bielby@education.gov.uk} (\href{https://orcid.org/0000-0001-9070-9969}{ORCID}) [contributor]
   \item Menna Zayed \email{menna.zayed@education.gov.uk} [contributor]
   \item Lauren Snaathorst \email{lauren.snaathorst@education.gov.uk} [contributor]
+  \item Lara Garbett \email{lara.garbett@education.gov.uk} [contributor]
+  \item Paula Rocha \email{paula.rocha@education.gov.uk} [contributor]
 }
 
 }
